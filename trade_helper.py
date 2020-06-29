@@ -26,12 +26,12 @@ def add_main_list_ticker(msg):
     try:
         for i in msg:
             data = dict(symbol=i['s'], last_price=float(i['c']), bid_0=float(i['b']), ask_0=float(i['a']))
-            list_x = [x for x in Main.main_list_ticker if x['symbol'] == i['s']]
+            list_x = [x for x in Main.instrument_list if x['symbol'] == i['s']]
             if len(list_x) > 0:
-                Main.main_list_ticker.remove(list_x[0])
-                Main.main_list_ticker.append(data)
+                Main.instrument_list.remove(list_x[0])
+                Main.instrument_list.append(data)
             else:
-                Main.main_list_ticker.append(data)
+                Main.instrument_list.append(data)
     except Exception as ex:
         print(str(ex))
 
@@ -110,7 +110,7 @@ def make_account_info_instrument_balance_socket(dict_x: dict):
 
 
 def get_ticker(ticker: str):
-    list_x = [x for x in Main.main_list_ticker if x['symbol'] == ticker]
+    list_x = [x for x in Main.instrument_list if x['symbol'] == ticker]
 
     if len(list_x) > 0:
         return list_x[0]
@@ -135,3 +135,24 @@ def make_order(client: Client, side: str, ticker: str, quantity, price):
     except Exception as ex:
         # print(str(ex), '-----------')
         return 'ERROR'
+
+
+def make_tree(main_list: list, symbol_ass: str):
+    list_result = []
+    list_result_y = []
+    quote_ass_list = [x for x in main_list if x['quoteAss'] == symbol_ass]
+    base_ass_list2 = [x['baseAss'] for x in quote_ass_list]
+    base_ass_list2_copy = base_ass_list2
+    for i in base_ass_list2:
+        first_x = base_ass_list2_copy.pop(0)
+        for j in base_ass_list2:
+            if j != first_x:
+                list_result.append(dict(first=first_x + symbol_ass,
+                                        second=first_x + j,
+
+                                        third=j + symbol_ass))
+
+    for i in list_result:
+        if i['second'] in [x['ticker'] for x in main_list]:
+            list_result_y.append(i)
+    return list_result_y
