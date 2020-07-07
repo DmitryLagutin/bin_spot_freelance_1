@@ -9,17 +9,24 @@ class Main:
     exchange_rules = []
     # список троек
     tree_list = []
-
-    # базовый символ
-    basic_symbol = 'USDT'
-    # базовый баланс
-    balance = float(0)
     # список свободных балансов
     balance_list = []
-    # основной список позиций активный
+
+    # основной список инструментов активный
     instrument_list = []
-    # заработал ли поток получения ордеров
-    socket_work = False
+    # список основных троек cписок объектов
+    tree_inst_list = []
+
+    # основная тройка иструментов
+    main_tree_object = None
+
+    # основная позиция
+    position = None
+
+    trade_level = []
 
 
+    qt1 = 0.0
+    qt2 = 0.0
+    qt3 = 0.0
 
