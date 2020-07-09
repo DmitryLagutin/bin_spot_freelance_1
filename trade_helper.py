@@ -1,7 +1,7 @@
 from pprint import pformat
 from decimal import *
 
-from instrument import Instrument
+from instrument_tree import InstrumentTree
 from settings import *
 from decimal import *
 from typing import List, Any
@@ -15,7 +15,7 @@ from binance.enums import *
 from pprint import pprint
 from binance.client import Client
 import datetime
-from instrument import *
+from instrument_tree import *
 
 
 def thread_function():
@@ -35,7 +35,8 @@ def add_instrument_list(msg):
     """
     try:
         for i in msg:
-            data = dict(symbol=i['s'], last_price=float(i['c']), bid_0=float(i['b']), ask_0=float(i['a']))
+            data = dict(symbol=i['s'], event_time=int(i["E"]), last_price=float(i['c']), bid_0=float(i['b']),
+                        ask_0=float(i['a']))
             list_x = [x for x in Main.instrument_list if x['symbol'] == i['s']]
             if len(list_x) > 0:
                 Main.instrument_list.remove(list_x[0])
@@ -111,6 +112,23 @@ def get_balance_list(dict_x: dict):
     return list_x
 
 
+def min_price(ticker):
+    """
+    Функция, которая выдает минимальную цену, необходимую для торговлия по данному
+    инструменту в виде знаков после запятой
+    """
+    s = str([x["minPrice"] for x in Main.exchange_rules if x['ticker'] == ticker][0]).split('.')
+    count = 1
+    if s[0] == '1':
+        return 0
+    else:
+        for i in s[1]:
+            if i == '1':
+                return count
+            else:
+                count = count + 1
+
+
 def min_qty(ticker):
     """
     Функция, которая выдает минимальный объем, необходимый для торговлия по данному
@@ -137,7 +155,11 @@ def get_qty_for_trade(odj, y: int):
         if y == 0:
             return float('{0}.{1}'.format(str_x[0], str(y)))
         else:
-            return float('{0}.{1}'.format(str_x[0], str_x[1][0:y]))
+            if len(str_x[1]) < y:
+                return float('{0}.{1}'.format(str_x[0], str_x[1]))
+            else:
+                return float('{0}.{1}'.format(str_x[0], str_x[1][0:y]))
+
     except Exception as ex:
         print(str(ex))
 
@@ -229,16 +251,20 @@ def make_tree_instrument():
         for tree_x in Main.tree_list:
             if get_x(tree_x['first']) is not None and get_x(tree_x['second']) is not None and get_x(
                     tree_x['third']) is not None:
-                Main.tree_inst_list.append(Instrument(
-                    first=tree_x['first'], first_val=get_x(tree_x['first']),
-                    second=tree_x['second'], second_val=get_x(tree_x['second']),
-                    third=tree_x['third'], third_val=get_x(tree_x['third'])
-                ))
+                if tree_x['first'] + tree_x['second'] + tree_x['third'] not in [x.id for x in Main.tree_inst_list]:
+                    Main.tree_inst_list.append(InstrumentTree(
+
+
+                        first=tree_x['first'], first_val=get_x(tree_x['first']),
+                        second=tree_x['second'], second_val=get_x(tree_x['second']),
+                        third=tree_x['third'], third_val=get_x(tree_x['third'])
+                    ))
+
     except Exception as ex:
         print('Ошибка в make_tree_instrument')
 
 
-def get_main_instrument(first_balance: float, more_that: float, exchange_rates: float):
+def get_main_instrument_tree(first_balance: float, more_that: float, seconds_delta: int, exchange_rates: float):
     """
     Получает самую главную тройку, который состоит из трех иструментов, которые соотвествуют
     условиям
@@ -246,11 +272,15 @@ def get_main_instrument(first_balance: float, more_that: float, exchange_rates: 
     main_instrument_result = None
     list_xx = []
     try:
+        # пересчитываем все тройки инструментов
         make_tree_instrument()
         for i in Main.tree_inst_list:
             i.get_delta(first_balance=first_balance, exchange_rates=exchange_rates)
 
-        list_xx = [x for x in Main.tree_inst_list if x.delta > more_that]
+        list_xx = [x for x in Main.tree_inst_list if
+                   x.delta > more_that and (
+                           datetime.datetime.now() - time_convert(x.min_event_time)).seconds < seconds_delta]
+
         if len(list_xx) > 1:
             max_delta = sorted([x.delta for x in list_xx])[-1]
             main_instrument_result = [x for x in list_xx if x.delta == max_delta][0]
@@ -258,3 +288,21 @@ def get_main_instrument(first_balance: float, more_that: float, exchange_rates: 
         print('Ошибка в get_main_instrument')
     finally:
         return main_instrument_result, list_xx
+
+
+def time_convert(timestamp):
+    your_dt = datetime.datetime.fromtimestamp(timestamp / 1000)  # using the local timezone
+    # return your_dt.strftime("%Y-%m-%d %H:%M:%S")
+    return your_dt
+
+
+def buy_test(symbol, price, qty):
+    qty_x = qty / price
+    print(symbol, 'BUY---', get_qty_for_trade(qty_x, min_qty(symbol)), min_qty(symbol))
+    return qty_x
+
+
+def sell_test(symbol, price, qty):
+    qty_x = qty * price
+    print(symbol, 'SELL---', qty_x)
+    return qty_x

@@ -12,7 +12,7 @@ from pprint import pprint
 from trade_helper import *
 from settings import *
 import time
-from instrument import *
+from instrument_tree import *
 import json
 from random import randint
 import os
@@ -26,65 +26,121 @@ Main.balance_list = get_balance_list(Main.client.get_account()['balances'])
 # получаем тройки для определенного альта
 Main.tree_list = make_tree(Main.exchange_rules, 'USDT')
 
+pprint(Main.exchange_rules)
+
 # запускаем все потоки
 threading.Thread(target=thread_function).start()
 threading.Thread(target=ping_funk).start()
 
-time.sleep(5)
 
-
-def make_order(symbol: str, side: str, quantity):
+def make_order(symbol: str, side: str, price, quantity):
     try:
         order = Main.client.create_order(
             symbol=symbol,
             side=side,
-            type=ORDER_TYPE_MARKET,
-            quantity=quantity)
-        return float(order['origQty']), order
+            type=ORDER_TYPE_LIMIT,
+            timeInForce=TIME_IN_FORCE_FOK,  # TIME_IN_FORCE_FOK
+            price="{:0.0{}f}".format(price, min_price(symbol)),
+            quantity=float("{:0.0{}f}".format(quantity / price, min_qty(symbol)))
+            if side == "BUY"
+            else float("{:0.0{}f}".format(quantity, min_qty(symbol))))
+        if order['status'] == 'FILLED':
+            return dict(symbol=order['symbol'], qty=order['origQty'],
+                        open_price=order['price'], side=order['side'])
+        else:
+            return None
     except Exception as ex:
         print(str(ex))
         print('ERROR')
 
 
-x = []
-while len(x) == 0:
-    x = [x['ask_0'] for x in Main.instrument_list if x['symbol'] == 'HOTUSDT']
+# x1 = []
+# x2 = []
+# x3 = []
+# while len(x1) == 0 or len(x2)== 0 or len(x3)== 0:
+#     x1 = [x for x in Main.instrument_list if x['symbol'] == 'HOTUSDT']
+#     x2 = [x for x in Main.instrument_list if x['symbol'] == 'HOTBTC']
+#     x3 = [x for x in Main.instrument_list if x['symbol'] == 'BTCUSDT']
+#
+#
+# while True:
+#     Main.qt2 = make_order(symbol='HOTBTC', side="SELL",
+#                           price=float(x2[0]['bid_0']),
+#                           quantity=38541)
+#     print('Main.qt2', Main.qt2)
+#     if Main.qt2 is not None:
+#         Main.trade_level.append(1)
+#         break
 
-qt1, order1 = make_order(symbol='HOTUSDT', side="BUY",
-                         quantity=get_qty_for_trade(30.0 / x[0], min_qty('HOTUSDT')))
-print(order1)
-time.sleep(1)
-qt2, order2 = make_order(symbol="HOTBTC", side="SELL",
-                         quantity=qt1)
-print(order2)
-time.sleep(1)
-qt3, order3 = make_order(symbol="BTCUSDT", side="SELL",
-                         quantity=get_qty_for_trade(qt2, min_qty('BTCUSDT')))
-print(order3)
-print("Все готово")
-print(30.0, qt1, qt2, qt3)
-print('---------')
-print(order1, order2, order3)
 
-# # основной модуль
 # while True:
 #     try:
-#         # получаем иснтрумент с самым большим матиматическим ожиданием, исходя из условий, а также список иструментов
-#         main_instrument, main_list_x = get_main_instrument(first_balance=100.0,
-#                                                            more_that=100.0,
-#                                                            exchange_rates=70.0)
-#         if main_instrument is not None:
-#             print(main_instrument.first, main_instrument.second, main_instrument.third,
-#                   main_instrument.delta, '{0} - количество'.format(len(main_list_x)))
-#             # если позиция пока что не создана
-#             if Main.position is None:
-#                 Main.position = Position(instrument_id=main_instrument.id)
-#             # если позиция создана
-#             else:
-#                 Main.position.main_func_position()
-#         else:
-#             print("Пока что не готовы")
 #
-#         # time.sleep(1)
+#         x1 = [x for x in Main.instrument_list if x['symbol'] == 'HOTUSDT']
+#         x2 = [x for x in Main.instrument_list if x['symbol'] == 'HOTBTC']
+#         x3 = [x for x in Main.instrument_list if x['symbol'] == 'BTCUSDT']
+#         if len(Main.trade_level) == 0:
+#             Main.qt1 = make_order(symbol='HOTUSDT', side="BUY",
+#                                   price=float(x1[0]['bid_0']),
+#                                   quantity=30.0)
+#             print('Main.qt1', Main.qt1)
+#             if Main.qt1 is not None:
+#                 Main.trade_level.append(1)
+#
+#         elif len(Main.trade_level) == 1:
+#             Main.qt2 = make_order(symbol='HOTBTC', side="SELL",
+#                                   price=float(x2[0]['ask_0']),
+#                                   quantity=Main.qt1['qty'])
+#             print('Main.qt2', Main.qt2)
+#             if Main.qt2 is not None:
+#                 Main.trade_level.append(1)
+#         elif len(Main.trade_level) == 2:
+#             Main.qt3 = make_order(symbol='HOTUSDT', side="SELL",
+#                                   price=float(x3[0]['bid_0']),
+#                                   quantity=Main.qt2['qty'])
+#             print('Main.qt3', Main.qt3)
+#             if Main.qt3 is not None:
+#                 Main.trade_level.append(1)
+#
+#         if len(Main.trade_level) == 3:
+#             print(Main.qt1, Main.qt2, Main.qt3)
+#             break
+#
+#
 #     except Exception as ex:
 #         print(str(ex))
+
+
+# основной модуль
+while True:
+    try:
+        # получаем иснтрумент с самым большим матиматическим ожиданием, исходя из условий, а также список иструментов
+        main_instrument_tree, main_list_x = get_main_instrument_tree(first_balance=100.0,
+                                                                     more_that=50.0,
+                                                                     seconds_delta=10,
+                                                                     exchange_rates=70.0)
+        print(['{0}-{1}'.format(x.id, x.delta) for x in main_list_x])
+        if main_instrument_tree is not None:
+            print(main_instrument_tree.first, main_instrument_tree.second, main_instrument_tree.third,
+                  main_instrument_tree.delta, '{0} - количество'.format(len(main_list_x)))
+            # print(main_instrument.delta_0)
+            zz = (datetime.datetime.now() - time_convert(main_instrument_tree.min_event_time))
+            print(zz.seconds)
+
+            # # если позиция пока что не создана
+            # if Main.position is None:
+            #     Main.position = Position(instrument_id=main_instrument_tree.id)
+            # # если позиция создана
+            # else:
+            #     # если основной инструмент сменился, а в позиции еще не были совршены сделки
+            #     if main_instrument_tree.id != Main.position.id and Main.qt1 == 0.0:
+            #         Main.position = None
+            #     # если основной инструмент тот же или уже были сделки
+            #     else:
+            #         Main.position.main_func_position()
+        else:
+            print("Пока что не готовы")
+
+        # time.sleep(1)
+    except Exception as ex:
+        print(str(ex))
