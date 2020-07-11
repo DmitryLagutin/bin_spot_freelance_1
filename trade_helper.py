@@ -1,6 +1,6 @@
 from pprint import pformat
 from decimal import *
-
+from helper import *
 from instrument_tree import InstrumentTree
 from settings import *
 from decimal import *
@@ -28,25 +28,6 @@ def thread_function():
     bm.start()
 
 
-def add_instrument_list(msg):
-    """
-    Функция, которая добавляет в список иснтрументов все инстременты,
-    которые приходят из сокета
-    """
-    try:
-        for i in msg:
-            data = dict(symbol=i['s'], event_time=int(i["E"]), last_price=float(i['c']), bid_0=float(i['b']),
-                        ask_0=float(i['a']))
-            list_x = [x for x in Main.instrument_list if x['symbol'] == i['s']]
-            if len(list_x) > 0:
-                Main.instrument_list.remove(list_x[0])
-                Main.instrument_list.append(data)
-            else:
-                Main.instrument_list.append(data)
-    except Exception as ex:
-        print(str(ex))
-
-
 def user_socket(msg):
     """
     Сокет, из которого мы получаем данные юзера Бинанс
@@ -57,7 +38,6 @@ def user_socket(msg):
         Main.balance_list = get_balance_list_socket(msg['B'])
     elif msg['e'] == 'outboundAccountPosition':
         pass
-        # Main.balance_list_instrument = make_account_info_instrument_balance_socket(msg['B'])
 
 
 def ping_funk():
@@ -68,19 +48,6 @@ def ping_funk():
     while True:
         Main.client.ping()
         sleep(600)
-
-
-def get_count(ticker, min_amount):
-    """
-    Функиця, которая получает количество знаков после запятой
-    """
-    s = str([x[min_amount] for x in Main.exchange_rules if x['ticker'] == ticker][0]).split('.')
-    count = 1
-    for i in s[1]:
-        if i == '1':
-            return count
-        else:
-            count = count + 1
 
 
 def get_exchange_info(dict_list: dict):
@@ -110,97 +77,6 @@ def get_balance_list(dict_x: dict):
         list_x.append(dict(asset=balance['asset'], free=balance['free'],
                            locked=balance['locked']))
     return list_x
-
-
-def min_price(ticker):
-    """
-    Функция, которая выдает минимальную цену, необходимую для торговлия по данному
-    инструменту в виде знаков после запятой
-    """
-    s = str([x["minPrice"] for x in Main.exchange_rules if x['ticker'] == ticker][0]).split('.')
-    count = 1
-    if s[0] == '1':
-        return 0
-    else:
-        for i in s[1]:
-            if i == '1':
-                return count
-            else:
-                count = count + 1
-
-
-def min_qty(ticker):
-    """
-    Функция, которая выдает минимальный объем, необходимый для торговлия по данному
-    инструменту в виде знаков после запятой
-    """
-    s = str([x["minQty"] for x in Main.exchange_rules if x['ticker'] == ticker][0]).split('.')
-    count = 1
-    if s[0] == '1':
-        return 0
-    else:
-        for i in s[1]:
-            if i == '1':
-                return count
-            else:
-                count = count + 1
-
-
-def get_qty_for_trade(odj, y: int):
-    """
-    Функция, которая выдает объем оптимальный для торгов в соотвествии с правилами
-    """
-    str_x = str(odj).split('.')
-    try:
-        if y == 0:
-            return float('{0}.{1}'.format(str_x[0], str(y)))
-        else:
-            if len(str_x[1]) < y:
-                return float('{0}.{1}'.format(str_x[0], str_x[1]))
-            else:
-                return float('{0}.{1}'.format(str_x[0], str_x[1][0:y]))
-
-    except Exception as ex:
-        print(str(ex))
-
-
-def get_balance_list_socket(dict_x: dict):
-    """
-    Получаем список с балансами в кошельке из сокета
-    """
-    list_x = []
-    not_null_balance_list = [x for x in dict_x if float(x['f']) > 0 or float(x['l']) > 0]
-    for balance in not_null_balance_list:
-        list_x.append(dict(asset=balance['a'], free=balance['f'],
-                           locked=balance['l']))
-    return list_x
-
-
-# def make_account_info_instrument_balance_socket(dict_x: dict):
-#     list_x = []
-#     for balance in dict_x:
-#         list_x.append(dict(asset=balance['a'], free=balance['f'],
-#                            locked=balance['l']))
-#     return list_x
-
-
-# def make_order(client: Client, side: str, ticker: str, quantity, price):
-#     side_x = SIDE_BUY if side == "BUY" else SIDE_SELL
-#     price = get_qty_for_trade(price, get_count(ticker=ticker, min_amount='minPrice'))
-#     quantity = get_qty_for_trade(quantity, get_count(ticker=ticker, min_amount='minQty'))
-#     try:
-#         order = client.create_order(
-#             symbol=ticker,
-#             side=side_x,
-#             type=ORDER_TYPE_LIMIT,
-#             timeInForce=TIME_IN_FORCE_FOK,  # TIME_IN_FORCE_FOK
-#             quantity=quantity,
-#             price=str(price))
-#         print(order)
-#         return order
-#     except Exception as ex:
-#         # print(str(ex), '-----------')
-#         return 'ERROR'
 
 
 def make_tree(main_list: list, symbol_ass: str):
@@ -236,35 +112,36 @@ def make_tree(main_list: list, symbol_ass: str):
     return list_result_y
 
 
-def make_tree_instrument():
-    """ Создаем список объектов класса Instrument,
-    который в дальнейшем испрользуется для работы """
-    Main.tree_inst_list = []
+def get_main_instrument_tree(first_balance: float, more_that: float, num_of_trades: float, exchange_rates: float):
+    def make_tree_instrument():
+        """ Создаем список объектов класса Instrument,
+        который в дальнейшем испрользуется для работы """
+        Main.tree_inst_list = []
 
-    try:
-        def get_x(symbol):
-            try:
-                return [x for x in Main.instrument_list if x['symbol'] == symbol][0]
-            except Exception as ex:
-                return None
+        try:
+            def get_x(symbol):
+                try:
+                    return [x for x in Main.instrument_list if x['symbol'] == symbol][0]
+                except Exception as ex:
+                    return None
 
-        for tree_x in Main.tree_list:
-            if get_x(tree_x['first']) is not None and get_x(tree_x['second']) is not None and get_x(
-                    tree_x['third']) is not None:
-                if tree_x['first'] + tree_x['second'] + tree_x['third'] not in [x.id for x in Main.tree_inst_list]:
-                    Main.tree_inst_list.append(InstrumentTree(
+            for tree_x in Main.tree_list:
+                if get_x(tree_x['first']) is not None \
+                        and get_x(tree_x['second']) is not None \
+                        and get_x(tree_x['third']) is not None:
+                    if tree_x['first'] + \
+                            tree_x['second'] + \
+                            tree_x['third'] not in [x['id'] for x in Main.tree_inst_list]:
+                        Main.tree_inst_list.append(make_instrument_dict(first=get_x(tree_x['first']),
+                                                                        second=get_x(tree_x['second']),
+                                                                        third=get_x(tree_x['third']),
+                                                                        first_balance=first_balance,
+                                                                        exchange_rates=exchange_rates))
 
+        except Exception as ex:
+            print(str(ex))
+            print('Ошибка в make_tree_instrument')
 
-                        first=tree_x['first'], first_val=get_x(tree_x['first']),
-                        second=tree_x['second'], second_val=get_x(tree_x['second']),
-                        third=tree_x['third'], third_val=get_x(tree_x['third'])
-                    ))
-
-    except Exception as ex:
-        print('Ошибка в make_tree_instrument')
-
-
-def get_main_instrument_tree(first_balance: float, more_that: float, seconds_delta: int, exchange_rates: float):
     """
     Получает самую главную тройку, который состоит из трех иструментов, которые соотвествуют
     условиям
@@ -274,35 +151,18 @@ def get_main_instrument_tree(first_balance: float, more_that: float, seconds_del
     try:
         # пересчитываем все тройки инструментов
         make_tree_instrument()
-        for i in Main.tree_inst_list:
-            i.get_delta(first_balance=first_balance, exchange_rates=exchange_rates)
 
         list_xx = [x for x in Main.tree_inst_list if
-                   x.delta > more_that and (
-                           datetime.datetime.now() - time_convert(x.min_event_time)).seconds < seconds_delta]
+                   x['delta'] > more_that
+                   and x['num_of_trades'] > num_of_trades]
 
         if len(list_xx) > 1:
-            max_delta = sorted([x.delta for x in list_xx])[-1]
-            main_instrument_result = [x for x in list_xx if x.delta == max_delta][0]
+            max_delta = sorted([x['delta'] for x in list_xx])[-1]
+            main_instrument_result = [x for x in list_xx if x['delta'] == max_delta][0]
     except Exception as ex:
         print('Ошибка в get_main_instrument')
     finally:
         return main_instrument_result, list_xx
 
 
-def time_convert(timestamp):
-    your_dt = datetime.datetime.fromtimestamp(timestamp / 1000)  # using the local timezone
-    # return your_dt.strftime("%Y-%m-%d %H:%M:%S")
-    return your_dt
 
-
-def buy_test(symbol, price, qty):
-    qty_x = qty / price
-    print(symbol, 'BUY---', get_qty_for_trade(qty_x, min_qty(symbol)), min_qty(symbol))
-    return qty_x
-
-
-def sell_test(symbol, price, qty):
-    qty_x = qty * price
-    print(symbol, 'SELL---', qty_x)
-    return qty_x

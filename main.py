@@ -114,33 +114,36 @@ def make_order(symbol: str, side: str, price, quantity):
 # основной модуль
 while True:
     try:
+        print(Main.instrument_list)
+
         # получаем иснтрумент с самым большим матиматическим ожиданием, исходя из условий, а также список иструментов
-        main_instrument_tree, main_list_x = get_main_instrument_tree(first_balance=100.0,
-                                                                     more_that=50.0,
-                                                                     seconds_delta=10,
-                                                                     exchange_rates=70.0)
-        print(['{0}-{1}'.format(x.id, x.delta) for x in main_list_x])
-        if main_instrument_tree is not None:
-            print(main_instrument_tree.first, main_instrument_tree.second, main_instrument_tree.third,
-                  main_instrument_tree.delta, '{0} - количество'.format(len(main_list_x)))
-            # print(main_instrument.delta_0)
-            zz = (datetime.datetime.now() - time_convert(main_instrument_tree.min_event_time))
-            print(zz.seconds)
+        # main_instrument_tree, main_list_x = get_main_instrument_tree(first_balance=100.0,
+        #                                                              more_that=10.0,
+        #                                                              num_of_trades=0.2,
+        #                                                              exchange_rates=70.0)
+        # print(['{0}-{1}'.format(x['id'], x['delta']) for x in main_list_x])
+        # if main_instrument_tree is not None:
+        #     print(main_instrument_tree['first'], main_instrument_tree['second'], main_instrument_tree['third'],
+        #           main_instrument_tree['delta'], '{0} - количество'.format(len(main_list_x)))
+        #
+        #     print(main_instrument_tree['num_of_trades'])
+        #
+        #
+        #     # # если позиция пока что не создана
+        #     # if Main.position is None:
+        #     #     Main.position = Position(instrument_id=main_instrument_tree.id)
+        #     # # если позиция создана
+        #     # else:
+        #     #     # если основной инструмент сменился, а в позиции еще не были совршены сделки
+        #     #     if main_instrument_tree.id != Main.position.id and Main.qt1 == 0.0:
+        #     #         Main.position = None
+        #     #     # если основной инструмент тот же или уже были сделки
+        #     #     else:
+        #     #         Main.position.main_func_position()
+        # else:
+        #     print("Пока что не готовы")
 
-            # # если позиция пока что не создана
-            # if Main.position is None:
-            #     Main.position = Position(instrument_id=main_instrument_tree.id)
-            # # если позиция создана
-            # else:
-            #     # если основной инструмент сменился, а в позиции еще не были совршены сделки
-            #     if main_instrument_tree.id != Main.position.id and Main.qt1 == 0.0:
-            #         Main.position = None
-            #     # если основной инструмент тот же или уже были сделки
-            #     else:
-            #         Main.position.main_func_position()
-        else:
-            print("Пока что не готовы")
-
+        print(datetime.datetime.now().strftime('%H:%M:%S'))
         # time.sleep(1)
     except Exception as ex:
         print(str(ex))
