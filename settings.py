@@ -20,13 +20,16 @@ class Main:
     # основная тройка иструментов
     main_tree_object = None
 
-    # основная позиция
+    order_id = None
+
+    orders = []
+
     position = None
 
     trade_level = []
 
-
     qt1 = 0.0
     qt2 = 0.0
     qt3 = 0.0
+
 

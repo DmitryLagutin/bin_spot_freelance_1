@@ -3,6 +3,12 @@ from settings import *
 from binance.enums import *
 from trade_helper import *
 
+#
+#
+#
+# class
+
+
 
 class Position:
     def __init__(self, instrument_id: str):
